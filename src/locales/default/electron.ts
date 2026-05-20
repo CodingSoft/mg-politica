@@ -10,7 +10,7 @@ export default {
   'navigation.home': 'Home',
   'navigation.image': 'Image',
   'navigation.knowledgeBase': 'Knowledge Base',
-  'navigation.lobehub': 'LobeHub',
+  'navigation.lobehub': 'MG-Asistentes',
   'navigation.memory': 'Memory',
   'navigation.memoryContexts': 'Memory - Contexts',
   'navigation.memoryExperiences': 'Memory - Experiences',

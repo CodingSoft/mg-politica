@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { BRANDING_NAME } from '@lobechat/business-const';
+import { BRANDING_NAME, ORG_NAME } from '@lobechat/business-const';
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_LANG } from '@/const/locale';
@@ -29,7 +29,7 @@ describe('Ld', () => {
       const org = ld.genOrganization();
 
       expect(org['@type']).toBe('Organization');
-      expect(org.name).toBe('LobeHub');
+      expect(org.name).toBe(ORG_NAME);
       expect(org.url).toBe('https://lobehub.com');
     });
   });

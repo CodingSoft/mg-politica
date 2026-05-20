@@ -18,9 +18,9 @@ export interface HigressModelCard {
 export const params = {
   constructorOptions: {
     defaultHeaders: {
-      'HTTP-Referer': 'https://lobehub.com',
-      'X-Title': 'LobeHub',
-      'x-Request-Id': uniqueId('lobe-chat-'),
+      'HTTP-Referer': 'https://mg-asistentes.com',
+      'X-Title': 'MG-Asistentes',
+      'x-Request-Id': uniqueId('mg-asistentes-'),
     },
   },
   debug: {

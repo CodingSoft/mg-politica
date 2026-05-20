@@ -41,7 +41,7 @@ vi.mock('@/libs/better-auth/utils/client', () => ({
 }));
 
 vi.mock('@lobechat/business-const', () => ({
-  BRANDING_NAME: 'LobeHub',
+  BRANDING_NAME: 'MG-Asistentes',
   ENABLE_BUSINESS_FEATURES: false,
 }));
 
@@ -398,7 +398,7 @@ describe('useSignIn', () => {
         await result.current.handleSocialSignIn('google');
       });
 
-      expect(localStorage.getItem('lobehub:auth:last-provider:v1')).toBe('google');
+      expect(localStorage.getItem('mg-asistentes:auth:last-provider:v1')).toBe('google');
     });
   });
 
@@ -468,13 +468,13 @@ describe('useSignIn', () => {
 
   describe('provider sorting', () => {
     it('should sort last used provider first', () => {
-      localStorage.setItem('lobehub:auth:last-provider:v1', 'github');
+      localStorage.setItem('mg-asistentes:auth:last-provider:v1', 'github');
 
       const { result } = renderHook(() => useSignIn());
 
       expect(result.current.oAuthSSOProviders[0]).toBe('github');
 
-      localStorage.removeItem('lobehub:auth:last-provider:v1');
+      localStorage.removeItem('mg-asistentes:auth:last-provider:v1');
     });
   });
 });

@@ -181,16 +181,19 @@ const TaskEditor = memo<TaskEditorProps>(({ task, index, onChange, onDelete }) =
  *
  * Allows users to review and modify multiple tasks before execution.
  */
+const safeTasks = (tasks: unknown): TaskItem[] =>
+  Array.isArray(tasks) ? tasks : [];
+
 const ExecuteTasksIntervention = memo<BuiltinInterventionProps<ExecuteTasksParams>>(
   ({ args, onArgsChange, registerBeforeApprove }) => {
     // Local state
-    const [tasks, setTasks] = useState<TaskItem[]>(args?.tasks || []);
+    const [tasks, setTasks] = useState<TaskItem[]>(safeTasks(args?.tasks));
     const [hasChanges, setHasChanges] = useState(false);
 
     // Sync local state when args change externally
     useEffect(() => {
       if (!hasChanges) {
-        setTasks(args?.tasks || []);
+        setTasks(safeTasks(args?.tasks));
       }
     }, [args?.tasks, hasChanges]);
 

@@ -83,8 +83,8 @@ export const params = {
   },
   constructorOptions: {
     defaultHeaders: {
-      'HTTP-Referer': 'https://lobehub.com',
-      'X-Title': 'LobeHub',
+      'HTTP-Referer': 'https://mg-asistentes.com',
+      'X-Title': 'MG-Asistentes',
     },
   },
   debug: {

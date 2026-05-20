@@ -32,7 +32,7 @@ describe('builtinToolSelectors', () => {
       const result = builtinToolSelectors.metaList(state);
       expect(result).toEqual([
         {
-          author: 'LobeHub',
+          author: 'CodingSoft',
           identifier: 'test-skill',
           meta: { avatar: '🧪', description: 'A test skill', title: 'Test Skill' },
           type: 'builtin',
@@ -58,7 +58,7 @@ describe('builtinToolSelectors', () => {
       // Should only contain skill, hidden tool is filtered out
       expect(result).toEqual([
         {
-          author: 'LobeHub',
+          author: 'CodingSoft',
           identifier: 'test-skill',
           meta: { avatar: '🧪', description: 'A test skill', title: 'Test Skill' },
           type: 'builtin',

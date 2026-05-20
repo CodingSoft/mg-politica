@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#C5961B;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#B8860B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D4A530;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="goldLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E8C44A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#B8860B;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#00000020"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="600" fill="#ffffff"/>
+
+  <!-- Top decorative bar -->
+  <line x1="80" y1="100" x2="520" y2="100" stroke="#4A4A4A" stroke-width="2"/>
+  <line x1="80" y1="106" x2="520" y2="106" stroke="#B8860B" stroke-width="1" opacity="0.6"/>
+
+  <!-- Monogram Emblem -->
+  <g transform="translate(300, 250)" filter="url(#shadow)">
+    <!-- Outer ring -->
+    <circle cx="0" cy="0" r="80" fill="none" stroke="url(#goldGrad)" stroke-width="5"/>
+    <circle cx="0" cy="0" r="74" fill="none" stroke="url(#goldLight)" stroke-width="1" opacity="0.4"/>
+    
+    <!-- Inner ring -->
+    <circle cx="0" cy="0" r="60" fill="none" stroke="url(#goldGrad)" stroke-width="0.5" opacity="0.3"/>
+
+    <!-- M letter -->
+    <path d="M-30,-35 L-30,35 L0,5 L30,35 L30,-35" 
+          fill="none" stroke="url(#goldGrad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- G letter -->
+    <path d="M-20,12 L8,12 L8,-8 L-8,-8" 
+          fill="none" stroke="url(#goldGrad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="-8" y1="-8" x2="-8" y2="35" stroke="url(#goldGrad)" stroke-width="8" stroke-linecap="round"/>
+
+    <!-- Decorative lion head crest (top of circle) -->
+    <path d="M-15,-68 Q-8,-80 0,-76 Q8,-80 15,-68" 
+          fill="none" stroke="url(#goldLight)" stroke-width="2.5" opacity="0.7"/>
+    <path d="M-8,-72 Q0,-82 8,-72" 
+          fill="none" stroke="url(#goldLight)" stroke-width="1.5" opacity="0.5"/>
+    <circle cx="-5" cy="-74" r="1.5" fill="#C5961B" opacity="0.6"/>
+    <circle cx="5" cy="-74" r="1.5" fill="#C5961B" opacity="0.6"/>
+    <path d="M-3,-76 Q0,-79 3,-76" fill="none" stroke="#C5961B" stroke-width="1" opacity="0.5"/>
+  </g>
+
+  <!-- Organization Name -->
+  <text x="300" y="370" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" 
+        font-size="32" font-weight="bold" fill="#4A4A4A" letter-spacing="10">
+    CODINGSOFT
+  </text>
+
+  <!-- Decorative line under org name -->
+  <line x1="150" y1="390" x2="450" y2="390" stroke="#B8860B" stroke-width="0.8" opacity="0.5"/>
+
+  <!-- Bottom decorative bar -->
+  <line x1="80" y1="410" x2="520" y2="410" stroke="#B8860B" stroke-width="1" opacity="0.6"/>
+  <line x1="80" y1="416" x2="520" y2="416" stroke="#4A4A4A" stroke-width="2"/>
+
+  <!-- Product Name -->
+  <text x="300" y="455" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" 
+        font-size="22" font-weight="500" fill="#808080" letter-spacing="8">
+    MG-ASISTENTES
+  </text>
+
+  <!-- Tagline -->
+  <text x="300" y="485" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" 
+        font-size="12" fill="#A0A0A0" letter-spacing="4">
+    ASISTENCIA INTELIGENTE
+  </text>
+
+  <!-- Optional: bottom contact/site info -->
+  <text x="300" y="530" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" 
+        font-size="9" fill="#B0B0B0" letter-spacing="2">
+    CODINGSOFT &bull; MG-ASISTENTES
+  </text>
+</svg>

@@ -17,7 +17,7 @@ import type { AuthFetchOptions } from '../utils/authFetchOptions';
 import { withCaptchaToken } from '../utils/authFetchOptions';
 import { EMAIL_REGEX, USERNAME_REGEX } from './SignInEmailStep';
 
-const LAST_AUTH_PROVIDER_KEY = 'lobehub:auth:last-provider:v1';
+const LAST_AUTH_PROVIDER_KEY = 'mg-asistentes:auth:last-provider:v1';
 
 type Step = 'email' | 'password';
 

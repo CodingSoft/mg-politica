@@ -3,18 +3,18 @@ import type { ModelProviderCard } from '@/types/llm';
 const LobeHub: ModelProviderCard = {
   chatModels: [],
   description:
-    'LobeHub Cloud uses official APIs to access AI models and measures usage with Credits tied to model tokens.',
+    'MG-Asistentes Cloud uses official APIs to access AI models and measures usage with Credits tied to model tokens.',
   enabled: true,
-  id: 'lobehub',
-  modelsUrl: 'https://lobehub.com/zh/docs/usage/subscription/model-pricing',
-  name: 'LobeHub',
+  id: 'mg-asistentes',
+  modelsUrl: '',
+  name: 'MG-Asistentes',
   settings: {
     modelEditable: false,
     showAddNewModel: false,
     showModelFetcher: false,
   },
   showConfig: false,
-  url: 'https://lobehub.com',
+  url: '',
 };
 
 export default LobeHub;
