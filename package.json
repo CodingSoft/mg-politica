@@ -559,8 +559,5 @@
       "pdfjs-dist": "5.4.530",
       "stylelint-config-clean-order": "7.0.0"
     },
-    "patchedDependencies": {
-      "@upstash/qstash": "patches/@upstash__qstash.patch"
-    }
   }
 }
