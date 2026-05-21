@@ -89,7 +89,7 @@ RUN set -e && \
     pnpm i && \
     mkdir -p /deps && \
     cd /deps && \
-    pnpm init && \
+    node -e "require('fs').writeFileSync('package.json', JSON.stringify({name:'deps',version:'1.0.0'}))" && \
     pnpm add pg drizzle-orm
 
 COPY . .
