@@ -558,6 +558,6 @@
       "lexical": "0.42.0",
       "pdfjs-dist": "5.4.530",
       "stylelint-config-clean-order": "7.0.0"
-    },
+    }
   }
 }
