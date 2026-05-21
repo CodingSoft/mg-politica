@@ -83,8 +83,7 @@ RUN set -e && \
         echo 'canvas_binary_host_mirror=https://npmmirror.com/mirrors/canvas' >> .npmrc; \
     fi && \
     export COREPACK_NPM_REGISTRY=$(npm config get registry | sed 's/\/$//') && \
-    npm i -g corepack@latest && \
-    corepack enable && \
+    npm i -g pnpm@10.33.0 && \
     pnpm i && \
     mkdir -p /deps && \
     cd /deps && \
