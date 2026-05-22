@@ -4,7 +4,7 @@
 export const LOBE_CHAT_CLOUD = 'MG-Asistentes Cloud';
 
 export const BRANDING_NAME = 'MG-Asistentes';
-export const BRANDING_LOGO_URL = '/images/logo.svg';
+export const BRANDING_LOGO_URL = '/icons/icon-192x192.png';
 
 export const ORG_NAME = 'CodingSoft';
 

@@ -34,6 +34,8 @@ services:
       - 'REDIS_URL=redis://redis:6379'
       - 'REDIS_PREFIX=lobechat'
       - 'REDIS_TLS=0'
+      - 'SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt'
+      - 'LD_LIBRARY_PATH=/app/node_modules/@img/sharp-libvips-linux-x64/lib'
     env_file:
       - .env
     restart: always
@@ -65,11 +67,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: lobe-redis
-    # Optional: Remove or change these ports if:
-    # - You don't need external access
-    # - The ports conflict with other services on your host
-    ports:
-      - '6379:6379'
+    # No host port binding - only accessible via internal docker network
     command: redis-server --save 60 1000 --appendonly yes
     volumes:
       - 'redis_data:/data'

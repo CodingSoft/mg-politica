@@ -77,18 +77,29 @@ COPY patches ./patches
 COPY apps/desktop/src/main/package.json ./apps/desktop/src/main/package.json
 
 RUN set -e && \
-    if [ "${USE_CN_MIRROR:-false}" = "true" ]; then \
-        export SENTRYCLI_CDNURL="https://npmmirror.com/mirrors/sentry-cli"; \
-        npm config set registry "https://registry.npmmirror.com/"; \
-        echo 'canvas_binary_host_mirror=https://npmmirror.com/mirrors/canvas' >> .npmrc; \
-    fi && \
-    export COREPACK_NPM_REGISTRY=$(npm config get registry | sed 's/\/$//') && \
-    npm i -g pnpm@10.33.0 && \
-    pnpm i && \
-    mkdir -p /deps && \
-    cd /deps && \
-    node -e "require('fs').writeFileSync('package.json', JSON.stringify({name:'deps',version:'1.0.0'}))" && \
-    pnpm add pg drizzle-orm
+if [ "${USE_CN_MIRROR:-false}" = "true" ]; then \
+export SENTRYCLI_CDNURL="https://npmmirror.com/mirrors/sentry-cli"; \
+npm config set registry "https://registry.npmmirror.com/"; \
+echo 'canvas_binary_host_mirror=https://npmmirror.com/mirrors/canvas' >> .npmrc; \
+fi && \
+export COREPACK_NPM_REGISTRY=$(npm config get registry | sed 's/\/$//') && \
+npm i -g pnpm@10.33.0 && \
+pnpm i && \
+mkdir -p /deps && \
+cd /deps && \
+node -e "require('fs').writeFileSync('package.json', JSON.stringify({name:'deps',version:'1.0.0'}))" && \
+pnpm add pg drizzle-orm
+
+# Install sharp linux-x64 native binaries for cross-platform Docker deployment
+# pnpm only installs binaries for the build platform (e.g. darwin-arm64 on macOS),
+# but Docker runs on linux-x64, so we need these explicitly
+RUN cd /deps && \
+npm init -y --scope=sharp-fix 2>/dev/null && \
+npm install --ignore-scripts @img/sharp-linux-x64@0.34.5 @img/sharp-libvips-linux-x64@1.2.4 --legacy-peer-deps && \
+mkdir -p /sharp-linux-x64/@img/sharp-linux-x64 /sharp-linux-x64/@img/sharp-libvips-linux-x64 && \
+cp -r /deps/node_modules/@img/sharp-linux-x64/* /sharp-linux-x64/@img/sharp-linux-x64/ && \
+cp -r /deps/node_modules/@img/sharp-libvips-linux-x64/* /sharp-linux-x64/@img/sharp-libvips-linux-x64/ && \
+rm -rf /deps/node_modules/@img/sharp-linux-x64 /deps/node_modules/@img/sharp-libvips-linux-x64 /deps/package.json /deps/package-lock.json
 
 COPY . .
 
@@ -98,6 +109,28 @@ RUN rm -rf src/app/desktop "src/app/(backend)/trpc/desktop"
 
 # run build standalone for docker version
 RUN npm run build:docker
+
+# Fix Turbopack ESM bug in auth route: async ESM route modules get wrongly wrapped under `default`
+# The compiled route.js uses __turbopack_esm__({default: ...}) which doesn't export GET/POST
+# Replace with module.exports = R.m(moduleId).exports which correctly exposes the handlers
+RUN AUTH_ROUTE="$(find /app/.next/server/app -path '*/api/auth/\[...all\]/route.js' | head -1)" && \
+if [ -n "$AUTH_ROUTE" ]; then \
+  echo "Patching Turbopack auth route: $AUTH_ROUTE" && \
+  LAST_LINE="$(tail -1 "$AUTH_ROUTE")" && \
+  if echo "$LAST_LINE" | grep -q '__turbopack_esm__'; then \
+    MODULE_ID="$(echo "$LAST_LINE" | grep -oP 'R\.m\(\K[0-9]+')" && \
+    if [ -n "$MODULE_ID" ]; then \
+      sed -i "\$s/.*/R.m($MODULE_ID) module.exports=R.m($MODULE_ID).exports/" "$AUTH_ROUTE" && \
+      echo "Auth route patched: replaced __turbopack_esm__ with module.exports" ; \
+    else \
+      echo "WARNING: Could not extract module ID from auth route" ; \
+    fi ; \
+  else \
+    echo "Auth route already patched or does not need patching" ; \
+  fi ; \
+else \
+  echo "WARNING: Auth route file not found" ; \
+fi
 
 ## Application image, copy all the files for production
 FROM busybox:latest AS app
@@ -120,6 +153,10 @@ COPY --from=builder /deps/node_modules/.pnpm /app/node_modules/.pnpm
 COPY --from=builder /deps/node_modules/pg /app/node_modules/pg
 COPY --from=builder /deps/node_modules/drizzle-orm /app/node_modules/drizzle-orm
 
+# Copy sharp linux-x64 native binaries (cross-platform: built on macOS, runs on linux)
+COPY --from=builder /sharp-linux-x64/@img/sharp-linux-x64 /app/node_modules/@img/sharp-linux-x64
+COPY --from=builder /sharp-linux-x64/@img/sharp-libvips-linux-x64 /app/node_modules/@img/sharp-libvips-linux-x64
+
 # Copy server launcher and shared scripts
 COPY --from=builder /app/scripts/serverLauncher/startServer.js /app/startServer.js
 COPY --from=builder /app/scripts/_shared /app/scripts/_shared
@@ -136,10 +173,11 @@ FROM scratch
 COPY --from=app / /
 
 ENV NODE_ENV="production" \
-    NODE_OPTIONS="--dns-result-order=ipv4first --use-openssl-ca" \
-    NODE_EXTRA_CA_CERTS="" \
-    NODE_TLS_REJECT_UNAUTHORIZED="" \
-    SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt"
+NODE_OPTIONS="--dns-result-order=ipv4first --use-openssl-ca" \
+NODE_EXTRA_CA_CERTS="" \
+NODE_TLS_REJECT_UNAUTHORIZED="" \
+SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt" \
+LD_LIBRARY_PATH="/app/node_modules/@img/sharp-libvips-linux-x64/lib"
 
 # Make the middleware rewrite through local as default
 # refs: https://github.com/lobehub/lobehub/issues/5876
