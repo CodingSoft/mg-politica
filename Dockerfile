@@ -164,30 +164,20 @@ COPY --from=builder /sharp-linux-x64/@img/sharp-libvips-linux-x64 /app/node_modu
 RUN set -e && \
     SHARP_VER="0.34.5" && \
     LIBVIPS_VER="1.2.4" && \
-    # Create pnpm package directories
-    mkdir -p "/app/node_modules/.pnpm/@img+sharp-linux-x64@${SHARP_VER}/node_modules/@img/sharp-linux-x64/lib" && \
-    mkdir -p "/app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/sharp-libvips-linux-x64/lib" && \
-    # Copy binaries from flat location to pnpm structure
-    cp -r /app/node_modules/@img/sharp-linux-x64/lib/* \
-      "/app/node_modules/.pnpm/@img+sharp-linux-x64@${SHARP_VER}/node_modules/@img/sharp-linux-x64/lib/" && \
-    cp -r /app/node_modules/@img/sharp-libvips-linux-x64/lib/* \
-      "/app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/sharp-libvips-linux-x64/lib/" && \
-    # Copy package.json and other files too
-    cp /app/node_modules/@img/sharp-linux-x64/package.json \
-      "/app/node_modules/.pnpm/@img+sharp-linux-x64@${SHARP_VER}/node_modules/@img/sharp-linux-x64/" && \
-    cp /app/node_modules/@img/sharp-libvips-linux-x64/package.json \
-      "/app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/sharp-libvips-linux-x64/" && \
-    cp /app/node_modules/@img/sharp-libvips-linux-x64/versions.json \
-      "/app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/sharp-libvips-linux-x64/" && \
-    cp /app/node_modules/@img/sharp-libvips-linux-x64/index.js \
-      "/app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/sharp-libvips-linux-x64/" 2>/dev/null; \
-    # Create/verify symlinks in sharp@0.34.5/node_modules/@img/
+    # Copy entire @img packages to pnpm structure recursively (handles lib/, package.json, etc.)
+    mkdir -p "/app/node_modules/.pnpm/@img+sharp-linux-x64@${SHARP_VER}/node_modules/@img" && \
+    cp -r /app/node_modules/@img/sharp-linux-x64 \
+      "/app/node_modules/.pnpm/@img+sharp-linux-x64@${SHARP_VER}/node_modules/@img/" && \
+    mkdir -p "/app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img" && \
+    cp -r /app/node_modules/@img/sharp-libvips-linux-x64 \
+      "/app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/" && \
+    # Create symlinks in sharp@0.34.5/node_modules/@img/ (pnpm hoisted resolution)
     SHARP_DIR="/app/node_modules/.pnpm/sharp@${SHARP_VER}/node_modules/@img" && \
     if [ -d "$SHARP_DIR" ]; then \
       ln -sf "../../../@img+sharp-linux-x64@${SHARP_VER}/node_modules/@img/sharp-linux-x64" "$SHARP_DIR/sharp-linux-x64" && \
       ln -sf "../../../@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/sharp-libvips-linux-x64" "$SHARP_DIR/sharp-libvips-linux-x64"; \
     fi && \
-    # Create/verify symlinks in .pnpm/node_modules/@img/ (Turbopack resolution path)
+    # Create symlinks in .pnpm/node_modules/@img/ (Turbopack resolution path)
     PNPM_IMG_DIR="/app/node_modules/.pnpm/node_modules/@img" && \
     if [ -d "$PNPM_IMG_DIR" ]; then \
       ln -sf "../../@img+sharp-linux-x64@${SHARP_VER}/node_modules/@img/sharp-linux-x64" "$PNPM_IMG_DIR/sharp-linux-x64" && \
