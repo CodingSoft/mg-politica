@@ -154,8 +154,45 @@ COPY --from=builder /deps/node_modules/pg /app/node_modules/pg
 COPY --from=builder /deps/node_modules/drizzle-orm /app/node_modules/drizzle-orm
 
 # Copy sharp linux-x64 native binaries (cross-platform: built on macOS, runs on linux)
+# First, copy to flat node_modules/@img/ (for fallback resolution)
 COPY --from=builder /sharp-linux-x64/@img/sharp-linux-x64 /app/node_modules/@img/sharp-linux-x64
 COPY --from=builder /sharp-linux-x64/@img/sharp-libvips-linux-x64 /app/node_modules/@img/sharp-libvips-linux-x64
+# Then, install into pnpm's hoisted structure so Turbopack/Next.js can resolve them
+# pnpm resolves @img/sharp-linux-x64 from sharp@0.34.5/node_modules/@img/
+# and from .pnpm/node_modules/@img/
+RUN set -e && \
+    SHARP_VER="0.34.5" && \
+    LIBVIPS_VER="1.2.4" && \
+    # Create pnpm package directories
+    mkdir -p "/app/node_modules/.pnpm/@img+sharp-linux-x64@${SHARP_VER}/node_modules/@img/sharp-linux-x64/lib" && \
+    mkdir -p "/app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/sharp-libvips-linux-x64/lib" && \
+    # Copy binaries from flat location to pnpm structure
+    cp -r /app/node_modules/@img/sharp-linux-x64/lib/* \
+      "/app/node_modules/.pnpm/@img+sharp-linux-x64@${SHARP_VER}/node_modules/@img/sharp-linux-x64/lib/" && \
+    cp -r /app/node_modules/@img/sharp-libvips-linux-x64/lib/* \
+      "/app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/sharp-libvips-linux-x64/lib/" && \
+    # Copy package.json and other files too
+    cp /app/node_modules/@img/sharp-linux-x64/package.json \
+      "/app/node_modules/.pnpm/@img+sharp-linux-x64@${SHARP_VER}/node_modules/@img/sharp-linux-x64/" && \
+    cp /app/node_modules/@img/sharp-libvips-linux-x64/package.json \
+      "/app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/sharp-libvips-linux-x64/" && \
+    cp /app/node_modules/@img/sharp-libvips-linux-x64/versions.json \
+      "/app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/sharp-libvips-linux-x64/" && \
+    cp /app/node_modules/@img/sharp-libvips-linux-x64/index.js \
+      "/app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/sharp-libvips-linux-x64/" 2>/dev/null; \
+    # Create/verify symlinks in sharp@0.34.5/node_modules/@img/
+    SHARP_DIR="/app/node_modules/.pnpm/sharp@${SHARP_VER}/node_modules/@img" && \
+    if [ -d "$SHARP_DIR" ]; then \
+      ln -sf "../../../@img+sharp-linux-x64@${SHARP_VER}/node_modules/@img/sharp-linux-x64" "$SHARP_DIR/sharp-linux-x64" && \
+      ln -sf "../../../@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/sharp-libvips-linux-x64" "$SHARP_DIR/sharp-libvips-linux-x64"; \
+    fi && \
+    # Create/verify symlinks in .pnpm/node_modules/@img/ (Turbopack resolution path)
+    PNPM_IMG_DIR="/app/node_modules/.pnpm/node_modules/@img" && \
+    if [ -d "$PNPM_IMG_DIR" ]; then \
+      ln -sf "../../@img+sharp-linux-x64@${SHARP_VER}/node_modules/@img/sharp-linux-x64" "$PNPM_IMG_DIR/sharp-linux-x64" && \
+      ln -sf "../../@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/sharp-libvips-linux-x64" "$PNPM_IMG_DIR/sharp-libvips-linux-x64"; \
+    fi && \
+    echo "Sharp linux-x64 binaries installed successfully"
 
 # Copy server launcher and shared scripts
 COPY --from=builder /app/scripts/serverLauncher/startServer.js /app/startServer.js
@@ -177,7 +214,7 @@ NODE_OPTIONS="--dns-result-order=ipv4first --use-openssl-ca" \
 NODE_EXTRA_CA_CERTS="" \
 NODE_TLS_REJECT_UNAUTHORIZED="" \
 SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt" \
-LD_LIBRARY_PATH="/app/node_modules/@img/sharp-libvips-linux-x64/lib"
+LD_LIBRARY_PATH="/app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@1.2.4/node_modules/@img/sharp-libvips-linux-x64/lib"
 
 # Make the middleware rewrite through local as default
 # refs: https://github.com/lobehub/lobehub/issues/5876

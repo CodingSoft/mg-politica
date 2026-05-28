@@ -36,7 +36,9 @@ services:
       - 'REDIS_PREFIX=lobechat'
       - 'REDIS_TLS=0'
       - 'SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt'
-      - 'LD_LIBRARY_PATH=/app/node_modules/@img/sharp-libvips-linux-x64/lib'
+      - 'LD_LIBRARY_PATH=/app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@1.2.4/node_modules/@img/sharp-libvips-linux-x64/lib'
+    volumes:
+      - '/etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro'
     env_file:
       - .env
     restart: always
