@@ -14,9 +14,14 @@ COPY scripts/serverLauncher/startServer.js ./startServer.js
 COPY scripts/_shared ./scripts/_shared
 
 # Strip pnpm workspaces from package.json (npm can't handle them), then install pg + drizzle-orm
-# Also install @napi-rs/canvas-linux-x64-gnu for pdfjs-dist 5.x DOMMatrix (PDF text extraction)
+# Also install @napi-rs/canvas native binaries for pdfjs-dist 5.x DOMMatrix (PDF text extraction)
+# Architecture-aware: installs the correct canvas package for x64 or arm64
 RUN node -e "const p=require('./package.json'); delete p.workspaces; delete p.pnpm; require('fs').writeFileSync('package.json', JSON.stringify(p,null,2))" && \
-npm install pg drizzle-orm sharp @napi-rs/canvas-linux-x64-gnu --save --silent 2>&1 | tail -3 && \
+if [ "$(uname -m)" = "aarch64" ]; then \
+  npm install pg drizzle-orm sharp @napi-rs/canvas-linux-arm64-gnu --save --silent 2>&1 | tail -3; \
+else \
+  npm install pg drizzle-orm sharp @napi-rs/canvas-linux-x64-gnu --save --silent 2>&1 | tail -3; \
+fi && \
 ln -sf /usr/local/bin/node /bin/node
 
 # Verify key modules exist

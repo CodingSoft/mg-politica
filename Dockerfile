@@ -91,26 +91,44 @@ cd /deps && \
 node -e "require('fs').writeFileSync('package.json', JSON.stringify({name:'deps',version:'1.0.0'}))" && \
 pnpm add pg drizzle-orm
 
-# Install sharp linux-x64 native binaries for cross-platform Docker deployment
-# pnpm only installs binaries for the build platform (e.g. darwin-arm64 on macOS), 
-# but Docker runs on linux-x64, so we need these explicitly
+# Install sharp native binaries for the container's architecture
+# pnpm only installs binaries for the build platform (e.g. darwin-arm64 on macOS),
+# but Docker runs on linux, so we need these explicitly for the target arch
+ARG TARGETARCH
 RUN cd /deps && \
 npm init -y --scope=sharp-fix 2>/dev/null && \
-npm install --ignore-scripts @img/sharp-linux-x64@0.34.5 @img/sharp-libvips-linux-x64@1.2.4 --legacy-peer-deps && \
-mkdir -p /sharp-linux-x64/@img/sharp-linux-x64 /sharp-linux-x64/@img/sharp-libvips-linux-x64 && \
-cp -r /deps/node_modules/@img/sharp-linux-x64/* /sharp-linux-x64/@img/sharp-linux-x64/ && \
-cp -r /deps/node_modules/@img/sharp-libvips-linux-x64/* /sharp-linux-x64/@img/sharp-libvips-linux-x64/ && \
-rm -rf /deps/node_modules/@img/sharp-linux-x64 /deps/node_modules/@img/sharp-libvips-linux-x64 /deps/package.json /deps/package-lock.json
+if [ "$TARGETARCH" = "arm64" ]; then \
+  npm install --ignore-scripts @img/sharp-linux-arm64@0.34.5 @img/sharp-libvips-linux-arm64@1.2.4 --legacy-peer-deps && \
+  mkdir -p /sharp-native/@img/sharp-linux-arm64 /sharp-native/@img/sharp-libvips-linux-arm64 && \
+  cp -r /deps/node_modules/@img/sharp-linux-arm64/* /sharp-native/@img/sharp-linux-arm64/ && \
+  cp -r /deps/node_modules/@img/sharp-libvips-linux-arm64/* /sharp-native/@img/sharp-libvips-linux-arm64/ && \
+  rm -rf /deps/node_modules/@img/sharp-linux-arm64 /deps/node_modules/@img/sharp-libvips-linux-arm64; \
+else \
+  npm install --ignore-scripts @img/sharp-linux-x64@0.34.5 @img/sharp-libvips-linux-x64@1.2.4 --legacy-peer-deps && \
+  mkdir -p /sharp-native/@img/sharp-linux-x64 /sharp-native/@img/sharp-libvips-linux-x64 && \
+  cp -r /deps/node_modules/@img/sharp-linux-x64/* /sharp-native/@img/sharp-linux-x64/ && \
+  cp -r /deps/node_modules/@img/sharp-libvips-linux-x64/* /sharp-native/@img/sharp-libvips-linux-x64/ && \
+  rm -rf /deps/node_modules/@img/sharp-linux-x64 /deps/node_modules/@img/sharp-libvips-linux-x64; \
+fi && \
+rm -rf /deps/package.json /deps/package-lock.json
 
-# Install @napi-rs/canvas linux-x64-gnu native binaries for cross-platform Docker deployment
+# Install @napi-rs/canvas native binaries for the container's architecture
 # pdfjs-dist 5.x requires DOMMatrix from @napi-rs/canvas at module initialization
-# Without these binaries, PDF text extraction fails in Docker containers
+# Without these binaries, PDF text extraction falls back to pure-JS polyfill
 RUN cd /deps && \
 npm init -y --scope=canvas-fix 2>/dev/null && \
-npm install --ignore-scripts @napi-rs/canvas-linux-x64-gnu@0.1.100 --legacy-peer-deps && \
-mkdir -p /canvas-linux-x64/@napi-rs/canvas-linux-x64-gnu && \
-cp -r /deps/node_modules/@napi-rs/canvas-linux-x64-gnu/* /canvas-linux-x64/@napi-rs/canvas-linux-x64-gnu/ && \
-rm -rf /deps/node_modules/@napi-rs/canvas-linux-x64-gnu /deps/package.json /deps/package-lock.json
+if [ "$TARGETARCH" = "arm64" ]; then \
+  npm install --ignore-scripts @napi-rs/canvas-linux-arm64-gnu@0.1.100 --legacy-peer-deps && \
+  mkdir -p /canvas-native/@napi-rs/canvas-linux-arm64-gnu && \
+  cp -r /deps/node_modules/@napi-rs/canvas-linux-arm64-gnu/* /canvas-native/@napi-rs/canvas-linux-arm64-gnu/ && \
+  rm -rf /deps/node_modules/@napi-rs/canvas-linux-arm64-gnu; \
+else \
+  npm install --ignore-scripts @napi-rs/canvas-linux-x64-gnu@0.1.100 --legacy-peer-deps && \
+  mkdir -p /canvas-native/@napi-rs/canvas-linux-x64-gnu && \
+  cp -r /deps/node_modules/@napi-rs/canvas-linux-x64-gnu/* /canvas-native/@napi-rs/canvas-linux-x64-gnu/ && \
+  rm -rf /deps/node_modules/@napi-rs/canvas-linux-x64-gnu; \
+fi && \
+rm -rf /deps/package.json /deps/package-lock.json
 
 COPY . .
 
@@ -164,59 +182,64 @@ COPY --from=builder /deps/node_modules/.pnpm /app/node_modules/.pnpm
 COPY --from=builder /deps/node_modules/pg /app/node_modules/pg
 COPY --from=builder /deps/node_modules/drizzle-orm /app/node_modules/drizzle-orm
 
-# Copy sharp linux-x64 native binaries (cross-platform: built on macOS, runs on linux)
+# Copy sharp native binaries (architecture-aware: x64 or arm64)
 # First, copy to flat node_modules/@img/ (for fallback resolution)
-COPY --from=builder /sharp-linux-x64/@img/sharp-linux-x64 /app/node_modules/@img/sharp-linux-x64
-COPY --from=builder /sharp-linux-x64/@img/sharp-libvips-linux-x64 /app/node_modules/@img/sharp-libvips-linux-x64
+ARG TARGETARCH
+COPY --from=builder /sharp-native/@img/ /app/node_modules/@img/
 # Then, install into pnpm's hoisted structure so Turbopack/Next.js can resolve them
-# pnpm resolves @img/sharp-linux-x64 from sharp@0.34.5/node_modules/@img/
-# and from .pnpm/node_modules/@img/
 RUN set -e && \
-    SHARP_VER="0.34.5" && \
-    LIBVIPS_VER="1.2.4" && \
-    # Copy entire @img packages to pnpm structure recursively (handles lib/, package.json, etc.)
-    mkdir -p "/app/node_modules/.pnpm/@img+sharp-linux-x64@${SHARP_VER}/node_modules/@img" && \
-    cp -r /app/node_modules/@img/sharp-linux-x64 \
-      "/app/node_modules/.pnpm/@img+sharp-linux-x64@${SHARP_VER}/node_modules/@img/" && \
-    mkdir -p "/app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img" && \
-    cp -r /app/node_modules/@img/sharp-libvips-linux-x64 \
-      "/app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/" && \
-    # Create symlinks in sharp@0.34.5/node_modules/@img/ (pnpm hoisted resolution)
-    SHARP_DIR="/app/node_modules/.pnpm/sharp@${SHARP_VER}/node_modules/@img" && \
-    if [ -d "$SHARP_DIR" ]; then \
-      ln -sf "../../../@img+sharp-linux-x64@${SHARP_VER}/node_modules/@img/sharp-linux-x64" "$SHARP_DIR/sharp-linux-x64" && \
-      ln -sf "../../../@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/sharp-libvips-linux-x64" "$SHARP_DIR/sharp-libvips-linux-x64"; \
-    fi && \
-    # Create symlinks in .pnpm/node_modules/@img/ (Turbopack resolution path)
-    PNPM_IMG_DIR="/app/node_modules/.pnpm/node_modules/@img" && \
-    if [ -d "$PNPM_IMG_DIR" ]; then \
-      ln -sf "../../@img+sharp-linux-x64@${SHARP_VER}/node_modules/@img/sharp-linux-x64" "$PNPM_IMG_DIR/sharp-linux-x64" && \
-      ln -sf "../../@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/sharp-libvips-linux-x64" "$PNPM_IMG_DIR/sharp-libvips-linux-x64"; \
-    fi && \
-    echo "Sharp linux-x64 binaries installed successfully"
+SHARP_VER="0.34.5" && \
+LIBVIPS_VER="1.2.4" && \
+ARCH="${TARGETARCH:-amd64}" && \
+if [ "$ARCH" = "amd64" ]; then ARCH="x64"; fi && \
+SHARP_PLAT="sharp-linux-${ARCH}" && \
+LIBVIPS_PLAT="sharp-libvips-linux-${ARCH}" && \
+# Copy entire @img packages to pnpm structure recursively (handles lib/, package.json, etc.)
+mkdir -p "/app/node_modules/.pnpm/@img+${SHARP_PLAT}@${SHARP_VER}/node_modules/@img" && \
+cp -r "/app/node_modules/@img/${SHARP_PLAT}" \
+"/app/node_modules/.pnpm/@img+${SHARP_PLAT}@${SHARP_VER}/node_modules/@img/" && \
+mkdir -p "/app/node_modules/.pnpm/@img+${LIBVIPS_PLAT}@${LIBVIPS_VER}/node_modules/@img" && \
+cp -r "/app/node_modules/@img/${LIBVIPS_PLAT}" \
+"/app/node_modules/.pnpm/@img+${LIBVIPS_PLAT}@${LIBVIPS_VER}/node_modules/@img/" && \
+# Create symlinks in sharp@0.34.5/node_modules/@img/ (pnpm hoisted resolution)
+SHARP_DIR="/app/node_modules/.pnpm/sharp@${SHARP_VER}/node_modules/@img" && \
+if [ -d "$SHARP_DIR" ]; then \
+ln -sf "../../../@img+${SHARP_PLAT}@${SHARP_VER}/node_modules/@img/${SHARP_PLAT}" "$SHARP_DIR/${SHARP_PLAT}" && \
+ln -sf "../../../@img+${LIBVIPS_PLAT}@${LIBVIPS_VER}/node_modules/@img/${LIBVIPS_PLAT}" "$SHARP_DIR/${LIBVIPS_PLAT}"; \
+fi && \
+# Create symlinks in .pnpm/node_modules/@img/ (Turbopack resolution path)
+PNPM_IMG_DIR="/app/node_modules/.pnpm/node_modules/@img" && \
+if [ -d "$PNPM_IMG_DIR" ]; then \
+ln -sf "../../@img+${SHARP_PLAT}@${SHARP_VER}/node_modules/@img/${SHARP_PLAT}" "$PNPM_IMG_DIR/${SHARP_PLAT}" && \
+ln -sf "../../@img+${LIBVIPS_PLAT}@${LIBVIPS_VER}/node_modules/@img/${LIBVIPS_PLAT}" "$PNPM_IMG_DIR/${LIBVIPS_PLAT}"; \
+fi && \
+echo "Sharp linux-${ARCH} binaries installed successfully"
 
-# Copy @napi-rs/canvas linux-x64-gnu native binaries (cross-platform: built on macOS, runs on linux)
-# Required by pdfjs-dist 5.x for DOMMatrix polyfill — without it, PDF text extraction fails
+# Copy @napi-rs/canvas native binaries (architecture-aware: x64 or arm64)
+# Required by pdfjs-dist 5.x for DOMMatrix — without it, PDF text extraction falls back to pure-JS polyfill
 # First, copy to flat node_modules/@napi-rs/ (for fallback resolution)
-COPY --from=builder /canvas-linux-x64/@napi-rs/canvas-linux-x64-gnu /app/node_modules/@napi-rs/canvas-linux-x64-gnu
+COPY --from=builder /canvas-native/@napi-rs/ /app/node_modules/@napi-rs/
 # Then, install into pnpm's hoisted structure so the module resolver can find them
 RUN set -e && \
 CANVAS_VER="0.1.100" && \
+ARCH="${TARGETARCH:-amd64}" && \
+if [ "$ARCH" = "amd64" ]; then ARCH="x64"; fi && \
+CANVAS_PLAT="canvas-linux-${ARCH}-gnu" && \
 # Copy to pnpm structure (handles .node binary, package.json, etc.)
-mkdir -p "/app/node_modules/.pnpm/@napi-rs+canvas-linux-x64-gnu@${CANVAS_VER}/node_modules/@napi-rs" && \
-cp -r /app/node_modules/@napi-rs/canvas-linux-x64-gnu \
-"/app/node_modules/.pnpm/@napi-rs+canvas-linux-x64-gnu@${CANVAS_VER}/node_modules/@napi-rs/" && \
+mkdir -p "/app/node_modules/.pnpm/@napi-rs+${CANVAS_PLAT}@${CANVAS_VER}/node_modules/@napi-rs" && \
+cp -r "/app/node_modules/@napi-rs/${CANVAS_PLAT}" \
+"/app/node_modules/.pnpm/@napi-rs+${CANVAS_PLAT}@${CANVAS_VER}/node_modules/@napi-rs/" && \
 # Create symlinks in canvas@0.1.100/node_modules/@napi-rs/ (pnpm hoisted resolution)
 CANVAS_DIR="/app/node_modules/.pnpm/@napi-rs+canvas@${CANVAS_VER}/node_modules/@napi-rs" && \
 if [ -d "$CANVAS_DIR" ]; then \
-ln -sf "../../../@napi-rs+canvas-linux-x64-gnu@${CANVAS_VER}/node_modules/@napi-rs/canvas-linux-x64-gnu" "$CANVAS_DIR/canvas-linux-x64-gnu"; \
+ln -sf "../../../@napi-rs+${CANVAS_PLAT}@${CANVAS_VER}/node_modules/@napi-rs/${CANVAS_PLAT}" "$CANVAS_DIR/${CANVAS_PLAT}"; \
 fi && \
 # Create symlinks in .pnpm/node_modules/@napi-rs/ (fallback resolution path)
 PNPM_NAPI_DIR="/app/node_modules/.pnpm/node_modules/@napi-rs" && \
 if [ -d "$PNPM_NAPI_DIR" ]; then \
-ln -sf "../../@napi-rs+canvas-linux-x64-gnu@${CANVAS_VER}/node_modules/@napi-rs/canvas-linux-x64-gnu" "$PNPM_NAPI_DIR/canvas-linux-x64-gnu"; \
+ln -sf "../../@napi-rs+${CANVAS_PLAT}@${CANVAS_VER}/node_modules/@napi-rs/${CANVAS_PLAT}" "$PNPM_NAPI_DIR/${CANVAS_PLAT}"; \
 fi && \
-echo "@napi-rs/canvas linux-x64-gnu binaries installed successfully"
+echo "@napi-rs/canvas linux-${ARCH}-gnu binaries installed successfully"
 
 # Copy server launcher and shared scripts
 COPY --from=builder /app/scripts/serverLauncher/startServer.js /app/startServer.js
@@ -238,7 +261,7 @@ NODE_OPTIONS="--dns-result-order=ipv4first --use-openssl-ca" \
 NODE_EXTRA_CA_CERTS="" \
 NODE_TLS_REJECT_UNAUTHORIZED="" \
 SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt" \
-LD_LIBRARY_PATH="/app/node_modules/.pnpm/@img+sharp-libvips-linux-x64@1.2.4/node_modules/@img/sharp-libvips-linux-x64/lib"
+LD_LIBRARY_PATH=""
 
 # Make the middleware rewrite through local as default
 # refs: https://github.com/lobehub/lobehub/issues/5876

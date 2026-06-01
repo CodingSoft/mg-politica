@@ -25,9 +25,14 @@ COPY scripts/serverLauncher/startServer.js ./startServer.js
 COPY scripts/_shared ./scripts/_shared
 
 # Install runtime deps needed by migration scripts (pg, drizzle-orm)
-# Also install @napi-rs/canvas-linux-x64-gnu for pdfjs-dist 5.x DOMMatrix polyfill (PDF text extraction)
+# Also install @napi-rs/canvas native binaries for pdfjs-dist 5.x DOMMatrix (PDF text extraction)
+# Architecture-aware: installs the correct canvas package for x64 or arm64
 RUN npm init -y --silent && \
-npm install pg drizzle-orm sharp @napi-rs/canvas-linux-x64-gnu --save --silent
+if [ "$(uname -m)" = "aarch64" ]; then \
+  npm install pg drizzle-orm sharp @napi-rs/canvas-linux-arm64-gnu --save --silent; \
+else \
+  npm install pg drizzle-orm sharp @napi-rs/canvas-linux-x64-gnu --save --silent; \
+fi
 
 # Runtime environment
 ENV NODE_ENV="production" \

@@ -179,6 +179,18 @@ const runServer = async () => {
   // Check for deprecated auth env vars first - fail fast if found
   checkDeprecatedAuth({ action: 'restart' });
 
+  // Set LD_LIBRARY_PATH for sharp-libvips based on detected architecture
+  // The Dockerfile installs native binaries for the correct arch (x64 or arm64),
+  // but LD_LIBRARY_PATH must point to the matching lib directory
+  if (!process.env.LD_LIBRARY_PATH || process.env.LD_LIBRARY_PATH === '') {
+    const arch = process.arch; // 'x64' or 'arm64'
+    const libvipsDir = `/app/node_modules/.pnpm/@img+sharp-libvips-linux-${arch}@1.2.4/node_modules/@img/sharp-libvips-linux-${arch}/lib`;
+    if (existsSync(libvipsDir)) {
+      process.env.LD_LIBRARY_PATH = libvipsDir;
+      console.log(`📚 LD_LIBRARY_PATH set to: ${libvipsDir}`);
+    }
+  }
+
   console.log('🌐 DNS Server:', dns.getServers());
   console.log('-------------------------------------');
 

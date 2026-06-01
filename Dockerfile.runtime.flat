@@ -11,11 +11,16 @@ COPY errorHint.js ./
 COPY startServer.js ./
 COPY _shared ./scripts/_shared
 
-# Install sharp (image processing) and @napi-rs/canvas-linux-x64-gnu (pdfjs-dist 5.x DOMMatrix / PDF text extraction)
+# Install sharp (image processing) and @napi-rs/canvas native binaries (pdfjs-dist 5.x DOMMatrix / PDF text extraction)
+# Architecture-aware: installs the correct canvas package for x64 or arm64
 RUN ln -sf /usr/local/bin/node /bin/node && \
-    node -e "const p=require('./package.json'); delete p.workspaces; delete p.pnpm; require('fs').writeFileSync('package.json', JSON.stringify(p,null,2))" && \
-    npm install --silent 2>&1 | tail -5 && \
-    npm install sharp @napi-rs/canvas-linux-x64-gnu --no-save --silent 2>&1 | tail -3
+node -e "const p=require('./package.json'); delete p.workspaces; delete p.pnpm; require('fs').writeFileSync('package.json', JSON.stringify(p,null,2))" && \
+npm install --silent 2>&1 | tail -5 && \
+if [ "$(uname -m)" = "aarch64" ]; then \
+  npm install sharp @napi-rs/canvas-linux-arm64-gnu --no-save --silent 2>&1 | tail -3; \
+else \
+  npm install sharp @napi-rs/canvas-linux-x64-gnu --no-save --silent 2>&1 | tail -3; \
+fi
 
 ENV NODE_ENV="production" \
     NODE_OPTIONS="--dns-result-order=ipv4first --use-openssl-ca" \
