@@ -1,0 +1,35 @@
+FROM node:24-slim
+
+WORKDIR /app
+
+COPY .next/standalone ./
+COPY .next/static ./.next/static
+COPY public/_spa ./public/_spa
+
+COPY packages/database/migrations ./migrations
+COPY scripts/migrateServerDB/docker.cjs ./docker.cjs
+COPY scripts/migrateServerDB/errorHint.js ./errorHint.js
+
+COPY scripts/serverLauncher/startServer.js ./startServer.js
+COPY scripts/_shared ./scripts/_shared
+
+# Strip pnpm workspaces from package.json (npm can't handle them), then install pg + drizzle-orm
+# Also install @napi-rs/canvas-linux-x64-gnu for pdfjs-dist 5.x DOMMatrix (PDF text extraction)
+RUN node -e "const p=require('./package.json'); delete p.workspaces; delete p.pnpm; require('fs').writeFileSync('package.json', JSON.stringify(p,null,2))" && \
+npm install pg drizzle-orm sharp @napi-rs/canvas-linux-x64-gnu --save --silent 2>&1 | tail -3 && \
+ln -sf /usr/local/bin/node /bin/node
+
+# Verify key modules exist
+RUN node -e "try{require('next/dist/server/next.js');console.log('[OK] next')}catch(e){console.log('[FAIL] next:',e.message)}" && \
+    node -e "try{require('pg');console.log('[OK] pg')}catch(e){console.log('[FAIL] pg:',e.message)}" && \
+    node -e "try{require('drizzle-orm');console.log('[OK] drizzle-orm')}catch(e){console.log('[FAIL] drizzle-orm:',e.message)}"
+
+ENV NODE_ENV="production" \
+    NODE_OPTIONS="--dns-result-order=ipv4first --use-openssl-ca" \
+    HOSTNAME="0.0.0.0" \
+    PORT="3210"
+
+USER node
+EXPOSE 3210/tcp
+ENTRYPOINT ["node"]
+CMD ["/app/startServer.js"]

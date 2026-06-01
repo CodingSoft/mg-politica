@@ -1,0 +1,28 @@
+FROM node:24-slim
+
+WORKDIR /app
+
+COPY standalone ./
+COPY static ./.next/static
+COPY _spa ./public/_spa
+COPY migrations ./migrations
+COPY docker.cjs ./
+COPY errorHint.js ./
+COPY startServer.js ./
+COPY _shared ./scripts/_shared
+
+# Install sharp (image processing) and @napi-rs/canvas-linux-x64-gnu (pdfjs-dist 5.x DOMMatrix / PDF text extraction)
+RUN ln -sf /usr/local/bin/node /bin/node && \
+    node -e "const p=require('./package.json'); delete p.workspaces; delete p.pnpm; require('fs').writeFileSync('package.json', JSON.stringify(p,null,2))" && \
+    npm install --silent 2>&1 | tail -5 && \
+    npm install sharp @napi-rs/canvas-linux-x64-gnu --no-save --silent 2>&1 | tail -3
+
+ENV NODE_ENV="production" \
+    NODE_OPTIONS="--dns-result-order=ipv4first --use-openssl-ca" \
+    HOSTNAME="0.0.0.0" \
+    PORT="3210"
+
+USER node
+EXPOSE 3210/tcp
+ENTRYPOINT ["node"]
+CMD ["/app/startServer.js"]
