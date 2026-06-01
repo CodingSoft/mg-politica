@@ -92,7 +92,7 @@ node -e "require('fs').writeFileSync('package.json', JSON.stringify({name:'deps'
 pnpm add pg drizzle-orm
 
 # Install sharp linux-x64 native binaries for cross-platform Docker deployment
-# pnpm only installs binaries for the build platform (e.g. darwin-arm64 on macOS),
+# pnpm only installs binaries for the build platform (e.g. darwin-arm64 on macOS), 
 # but Docker runs on linux-x64, so we need these explicitly
 RUN cd /deps && \
 npm init -y --scope=sharp-fix 2>/dev/null && \
@@ -101,6 +101,16 @@ mkdir -p /sharp-linux-x64/@img/sharp-linux-x64 /sharp-linux-x64/@img/sharp-libvi
 cp -r /deps/node_modules/@img/sharp-linux-x64/* /sharp-linux-x64/@img/sharp-linux-x64/ && \
 cp -r /deps/node_modules/@img/sharp-libvips-linux-x64/* /sharp-linux-x64/@img/sharp-libvips-linux-x64/ && \
 rm -rf /deps/node_modules/@img/sharp-linux-x64 /deps/node_modules/@img/sharp-libvips-linux-x64 /deps/package.json /deps/package-lock.json
+
+# Install @napi-rs/canvas linux-x64-gnu native binaries for cross-platform Docker deployment
+# pdfjs-dist 5.x requires DOMMatrix from @napi-rs/canvas at module initialization
+# Without these binaries, PDF text extraction fails in Docker containers
+RUN cd /deps && \
+npm init -y --scope=canvas-fix 2>/dev/null && \
+npm install --ignore-scripts @napi-rs/canvas-linux-x64-gnu@0.1.100 --legacy-peer-deps && \
+mkdir -p /canvas-linux-x64/@napi-rs/canvas-linux-x64-gnu && \
+cp -r /deps/node_modules/@napi-rs/canvas-linux-x64-gnu/* /canvas-linux-x64/@napi-rs/canvas-linux-x64-gnu/ && \
+rm -rf /deps/node_modules/@napi-rs/canvas-linux-x64-gnu /deps/package.json /deps/package-lock.json
 
 COPY . .
 
@@ -184,6 +194,29 @@ RUN set -e && \
       ln -sf "../../@img+sharp-libvips-linux-x64@${LIBVIPS_VER}/node_modules/@img/sharp-libvips-linux-x64" "$PNPM_IMG_DIR/sharp-libvips-linux-x64"; \
     fi && \
     echo "Sharp linux-x64 binaries installed successfully"
+
+# Copy @napi-rs/canvas linux-x64-gnu native binaries (cross-platform: built on macOS, runs on linux)
+# Required by pdfjs-dist 5.x for DOMMatrix polyfill — without it, PDF text extraction fails
+# First, copy to flat node_modules/@napi-rs/ (for fallback resolution)
+COPY --from=builder /canvas-linux-x64/@napi-rs/canvas-linux-x64-gnu /app/node_modules/@napi-rs/canvas-linux-x64-gnu
+# Then, install into pnpm's hoisted structure so the module resolver can find them
+RUN set -e && \
+CANVAS_VER="0.1.100" && \
+# Copy to pnpm structure (handles .node binary, package.json, etc.)
+mkdir -p "/app/node_modules/.pnpm/@napi-rs+canvas-linux-x64-gnu@${CANVAS_VER}/node_modules/@napi-rs" && \
+cp -r /app/node_modules/@napi-rs/canvas-linux-x64-gnu \
+"/app/node_modules/.pnpm/@napi-rs+canvas-linux-x64-gnu@${CANVAS_VER}/node_modules/@napi-rs/" && \
+# Create symlinks in canvas@0.1.100/node_modules/@napi-rs/ (pnpm hoisted resolution)
+CANVAS_DIR="/app/node_modules/.pnpm/@napi-rs+canvas@${CANVAS_VER}/node_modules/@napi-rs" && \
+if [ -d "$CANVAS_DIR" ]; then \
+ln -sf "../../../@napi-rs+canvas-linux-x64-gnu@${CANVAS_VER}/node_modules/@napi-rs/canvas-linux-x64-gnu" "$CANVAS_DIR/canvas-linux-x64-gnu"; \
+fi && \
+# Create symlinks in .pnpm/node_modules/@napi-rs/ (fallback resolution path)
+PNPM_NAPI_DIR="/app/node_modules/.pnpm/node_modules/@napi-rs" && \
+if [ -d "$PNPM_NAPI_DIR" ]; then \
+ln -sf "../../@napi-rs+canvas-linux-x64-gnu@${CANVAS_VER}/node_modules/@napi-rs/canvas-linux-x64-gnu" "$PNPM_NAPI_DIR/canvas-linux-x64-gnu"; \
+fi && \
+echo "@napi-rs/canvas linux-x64-gnu binaries installed successfully"
 
 # Copy server launcher and shared scripts
 COPY --from=builder /app/scripts/serverLauncher/startServer.js /app/startServer.js
