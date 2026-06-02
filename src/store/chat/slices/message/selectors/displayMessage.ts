@@ -269,10 +269,10 @@ const findLastMessageIdRecursive = (node: UIChatMessage | undefined): string | u
     return (node as any).lastMessageId;
   }
 
-  // Priority 4: For 'tasks' virtual messages, return the parent message ID
+  // Priority 4: For 'tasks' / 'groupTasks' virtual messages, return the parent message ID
   // from extra.parentMessageId (or fall back to the last real task message ID)
-  // so we don't use the virtual ID (tasks-xxx-yyy-zzz) as a parent FK.
-  if (node.role === 'tasks') {
+  // so we don't use the virtual ID (tasks-xxx-yyy-zzz / groupTasks-xxx-yyy-zzz) as a parent FK.
+  if (node.role === 'tasks' || node.role === 'groupTasks') {
     const extra = (node as any).extra;
     if (extra?.parentMessageId) {
       return extra.parentMessageId;
