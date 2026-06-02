@@ -66,16 +66,33 @@ const findLastMessageIdRecursive = (node: UIChatMessage | undefined): string | u
     return lastTool?.result_msg_id;
   }
 
-  // Priority 3: For 'tasks' / 'groupTasks' virtual messages, return the parent message ID
-  // from extra.parentMessageId (or fall back to the last real task message ID)
-  // so we don't use the virtual ID (tasks-xxx-yyy-zzz / groupTasks-xxx-yyy-zzz) as a parent FK.
-  if (node.role === 'tasks' || node.role === 'groupTasks') {
+  // Priority 3: For virtual message nodes (tasks, groupTasks, compare, agentCouncil),
+  // return the real parent message ID from extra.parentMessageId instead of the virtual
+  // composite ID (e.g. "tasks-xxx-yyy-zzz") which would cause an FK violation if used as parent_id.
+  // Falls back to the last real child message ID if no parentMessageId is available.
+  if (
+    node.role === 'tasks' ||
+    node.role === 'groupTasks' ||
+    node.role === 'compare' ||
+    node.role === 'agentCouncil'
+  ) {
     const extra = (node as any).extra;
     if (extra?.parentMessageId) {
       return extra.parentMessageId;
     }
+    // Fallback: try to find a real message ID from child nodes
     if (node.tasks && node.tasks.length > 0) {
       return node.tasks.at(-1)?.id;
+    }
+    // For compare/agentCouncil, try columns or members
+    const nodeAny = node as any;
+    if (nodeAny.columns?.length > 0) {
+      const lastCol = nodeAny.columns.at(-1);
+      const lastMsg = Array.isArray(lastCol) ? lastCol.at(-1) : lastCol;
+      return lastMsg?.id;
+    }
+    if (nodeAny.members?.length > 0) {
+      return nodeAny.members.at(-1)?.id;
     }
     return undefined;
   }

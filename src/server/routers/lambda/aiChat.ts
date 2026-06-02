@@ -122,7 +122,18 @@ export const aiChatRouter = router({
         }
       }
 
+      // Sanitize parentId: reject virtual composite IDs (tasks-*, groupTasks-*, compare-*, agentCouncil-*)
+      // that are client-side display constructs, not real message IDs in the database.
+      // Using them as parent_id would cause FK violation. Set to undefined so the message
+      // becomes a root message in the topic instead.
       let parentId = input.newUserMessage.parentId;
+      if (parentId) {
+        const VIRTUAL_ID_PREFIXES = ['tasks-', 'groupTasks-', 'compare-', 'agentCouncil-'];
+        if (VIRTUAL_ID_PREFIXES.some((prefix) => parentId!.startsWith(prefix))) {
+          log('WARNING: rejecting virtual parentId "%s" — setting to undefined', parentId);
+          parentId = undefined;
+        }
+      }
 
       if (input.preloadMessages?.length) {
         log('creating %d preload messages before user message', input.preloadMessages.length);
