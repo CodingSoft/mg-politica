@@ -188,9 +188,21 @@ export function defineConfig() {
     // oauth
     // Make only the consent view public (GET page), not other oauth paths
     '/oauth/consent/(.*)',
+    // oidc - discovery & JWKS must be public for standard OIDC clients
+    '/oidc/.well-known/(.*)',
+    '/oidc/jwks',
     '/oidc/handoff',
     '/oidc/device/auth',
     '/oidc/token',
+    // oidc - endpoints that use their own auth (Bearer tokens), not BetterAuth session
+    '/oidc/me',
+    '/oidc/token/introspection',
+    '/oidc/token/revocation',
+    '/oidc/session/end',
+    '/oidc/auth',
+    '/oidc/callback/(.*)',
+    '/oidc/consent/(.*)',
+    '/oidc/clear-session',
     // market
     '/market-auth-callback',
     // public share pages
