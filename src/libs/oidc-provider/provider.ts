@@ -287,11 +287,11 @@ export const createOIDCProvider = async (db: LobeChatDatabase): Promise<Provider
     rotateRefreshToken: true,
 
     routes: {
-      authorization: '/oidc/auth',
-      code_verification: '/oidc/device',
-      device_authorization: '/oidc/device/auth',
-      end_session: '/oidc/session/end',
-      token: '/oidc/token',
+      authorization: '/auth',
+      code_verification: '/device',
+      device_authorization: '/device/auth',
+      end_session: '/session/end',
+      token: '/token',
     },
     // 3. Scopes definition
     scopes: defaultScopes,
