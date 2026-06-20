@@ -20,10 +20,10 @@ export const rendererDir = path.join(appPath, 'dist', 'renderer');
 
 export const userDataDir = app.getPath('userData');
 
-export const appStorageDir = path.join(userDataDir, 'lobehub-storage');
+export const appStorageDir = path.join(userDataDir, 'agentes-storage');
 
 // Legacy local database directory used in older desktop versions
-export const legacyLocalDbDir = path.join(appStorageDir, 'lobehub-local-db');
+export const legacyLocalDbDir = path.join(appStorageDir, 'agentes-local-db');
 
 // ------  Application storage directory ---- //
 

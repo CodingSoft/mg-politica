@@ -34,7 +34,7 @@ export class MCPClient {
   private isStdio: boolean = false;
 
   constructor(params: MCPClientParams) {
-    this.mcp = new Client({ name: 'lobehub-desktop-mcp-client', version: '1.0.0' });
+    this.mcp = new Client({ name: 'agentes-desktop-mcp-client', version: '1.0.0' });
 
     switch (params.type) {
       case 'http': {

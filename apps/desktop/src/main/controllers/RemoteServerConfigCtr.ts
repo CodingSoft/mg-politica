@@ -429,7 +429,7 @@ export default class RemoteServerConfigCtr extends ControllerModule {
 
       // Construct request body
       const body = querystring.stringify({
-        client_id: 'lobehub-desktop',
+        client_id: 'agentes-desktop',
         grant_type: 'refresh_token',
         refresh_token: refreshToken,
       });

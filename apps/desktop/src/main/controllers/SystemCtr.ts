@@ -232,7 +232,7 @@ export default class SystemController extends ControllerModule {
 
   /**
    * Detect whether user used the legacy local database in older desktop versions.
-   * Legacy path: {app.getPath('userData')}/lobehub-storage/lobehub-local-db
+   * Legacy path: {app.getPath('userData')}/agentes-storage/agentes-local-db
    */
   @IpcMethod()
   async hasLegacyLocalDb(): Promise<boolean> {

@@ -105,13 +105,13 @@ export default class AuthCtr extends ControllerModule {
 
       // Add query parameters
       authUrl.search = querystring.stringify({
-        client_id: 'lobehub-desktop',
+        client_id: 'agentes-desktop',
         code_challenge: codeChallenge,
         code_challenge_method: 'S256',
         prompt: 'consent',
         redirect_uri: redirectUri,
-        // https://github.com/lobehub/lobe-chat/pull/8450
-        resource: 'urn:lobehub:chat',
+        // https://github.com/CodingSoft/agentes/issues
+        resource: 'urn:codingsoft:agentes',
         response_type: 'code',
         scope: 'profile email offline_access',
         state: this.authRequestState,
@@ -321,7 +321,9 @@ export default class AuthCtr extends ControllerModule {
             this.stopAutoRefresh();
             await this.remoteServerConfigCtr.clearTokens();
             await this.remoteServerConfigCtr.setRemoteServerConfig({ active: false });
-            this.broadcastAuthorizationRequired();
+            this.broadcastAuthorizationRequired(
+              `auto-refresh:non_retryable ${result.error ?? ''}`.trim(),
+            );
           } else {
             // For other errors (after retries exhausted), log but don't clear tokens immediately
             // The next refresh cycle will retry
@@ -432,7 +434,7 @@ export default class AuthCtr extends ControllerModule {
           this.stopAutoRefresh();
           await this.remoteServerConfigCtr.clearTokens();
           await this.remoteServerConfigCtr.setRemoteServerConfig({ active: false });
-          this.broadcastAuthorizationRequired();
+          this.broadcastAuthorizationRequired(`refresh:non_retryable ${result.error ?? ''}`.trim());
         } else {
           // For transient errors, don't clear tokens - allow manual retry
           logger.warn('Refresh failed but error may be transient, tokens preserved for retry');
@@ -450,7 +452,7 @@ export default class AuthCtr extends ControllerModule {
         this.stopAutoRefresh();
         await this.remoteServerConfigCtr.clearTokens();
         await this.remoteServerConfigCtr.setRemoteServerConfig({ active: false });
-        this.broadcastAuthorizationRequired();
+        this.broadcastAuthorizationRequired(`refresh:exception ${errorMessage}`);
       }
 
       return { error: errorMessage, success: false };
@@ -473,7 +475,7 @@ export default class AuthCtr extends ControllerModule {
 
       // Construct request body
       const body = querystring.stringify({
-        client_id: 'lobehub-desktop',
+        client_id: 'agentes-desktop',
         code,
         code_verifier: codeVerifier,
         grant_type: 'authorization_code',
@@ -618,15 +620,17 @@ export default class AuthCtr extends ControllerModule {
   }
 
   /**
-   * Broadcast authorization required event
+   * Broadcast authorization required event.
+   * `reason` is a short tag (e.g. `refresh:invalid_grant`, `startup:non_retryable`)
+   * recorded so the renderer can log why the Session Expired modal appeared.
    */
-  private broadcastAuthorizationRequired() {
-    logger.debug('Broadcasting authorizationRequired event to all windows');
+  private broadcastAuthorizationRequired(reason: string) {
+    logger.info(`Broadcasting authorizationRequired event (reason=${reason})`);
     const allWindows = BrowserWindow.getAllWindows();
 
     for (const win of allWindows) {
       if (!win.isDestroyed()) {
-        win.webContents.send('authorizationRequired');
+        win.webContents.send('authorizationRequired', { reason });
       }
     }
   }
@@ -751,7 +755,9 @@ export default class AuthCtr extends ControllerModule {
         logger.warn('Non-retryable error during proactive refresh, clearing tokens');
         await this.remoteServerConfigCtr.clearTokens();
         await this.remoteServerConfigCtr.setRemoteServerConfig({ active: false });
-        this.broadcastAuthorizationRequired();
+        this.broadcastAuthorizationRequired(
+          `startup:non_retryable ${refreshResult.error ?? ''}`.trim(),
+        );
       } else {
         // For transient errors, still start auto-refresh timer to retry later
         logger.warn('Transient error during proactive refresh, will retry via auto-refresh');

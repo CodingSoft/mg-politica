@@ -171,7 +171,7 @@ describe('AuthCtr', () => {
 
         // Verify URL contains required parameters
         const authUrl = vi.mocked(shell.openExternal).mock.calls[0][0];
-        expect(authUrl).toContain('client_id=lobehub-desktop');
+        expect(authUrl).toContain('client_id=agentes-desktop');
         expect(authUrl).toContain('response_type=code');
         expect(authUrl).toContain('code_challenge_method=S256');
         expect(authUrl).toContain('scope=profile%20email%20offline_access');
@@ -797,7 +797,12 @@ describe('AuthCtr', () => {
         expect(mockRemoteServerConfigCtr.setRemoteServerConfig).toHaveBeenCalledWith({
           active: false,
         });
-        expect(mockWindow.webContents.send).toHaveBeenCalledWith('authorizationRequired');
+        expect(mockWindow.webContents.send).toHaveBeenCalledWith(
+          'authorizationRequired',
+          expect.objectContaining({
+            reason: expect.stringContaining('startup:non_retryable'),
+          }),
+        );
       });
 
       it('should preserve tokens on transient error', async () => {
