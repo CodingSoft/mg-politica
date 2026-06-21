@@ -1,5 +1,5 @@
 import { UserInteractionIdentifier } from '@lobechat/builtin-tool-user-interaction';
-import { DEFAULT_ONBOARDING_MODEL, DEFAULT_ONBOARDING_PROVIDER } from '@lobechat/business-const';
+import { BRANDING_LOGO_URL, DEFAULT_ONBOARDING_MODEL, DEFAULT_ONBOARDING_PROVIDER } from '@lobechat/business-const';
 
 import type { BuiltinAgentDefinition } from '../../types';
 import { BUILTIN_AGENT_SLUGS } from '../../types';
@@ -9,7 +9,7 @@ import { createSystemRole } from './systemRole';
 const WebOnboardingIdentifier = 'lobe-web-onboarding';
 
 export const WEB_ONBOARDING: BuiltinAgentDefinition = {
-  avatar: '/avatars/lobe-ai.png',
+  avatar: BRANDING_LOGO_URL || '/logo/agentes-icon.png',
   persist: {
     model: DEFAULT_ONBOARDING_MODEL,
     provider: DEFAULT_ONBOARDING_PROVIDER,
