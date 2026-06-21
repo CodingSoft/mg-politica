@@ -26,7 +26,7 @@ export const SOCIAL_URL = {
 };
 
 export const FILE_URL = {
-  importFromNotionGuide: 'https://hub-apac-1.lobeobjects.space/assets/notion.mp4',
+  importFromNotionGuide: '/docs/notion-import-guide.mp4',
 };
 
 export const BRANDING_EMAIL = {

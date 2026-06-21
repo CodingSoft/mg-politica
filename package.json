@@ -23,7 +23,7 @@
     "url": "https://github.com/lobehub/lobehub.git"
   },
   "license": "MIT",
-  "author": "LobeHub <i@lobehub.com>",
+  "author": "CodingSoft <hello@codingsoft.org>",
   "sideEffects": [
     "./src/initialize.ts"
   ],
